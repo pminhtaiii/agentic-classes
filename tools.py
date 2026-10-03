@@ -116,6 +116,24 @@ def pay(booking_code: str) -> dict:
         "status": "paid",
         "booking_code": booking_code
     }
+    
+@tool
+def get_booking(booking_code: str) -> dict:
+    """
+    Get the current booking information
+    """
+    booking = BOOKINGS.get(booking_code)
+    
+    if booking is None:
+        return {
+            "status": "not_found",
+            "booking_code": booking_code
+        }
+        
+    return {
+        "status": "ok",
+        "booking": booking.model_dump()
+    }
         
     
     
