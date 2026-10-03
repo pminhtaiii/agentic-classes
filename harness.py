@@ -18,3 +18,27 @@ class VerificationChecker:
                 or booking.refundable is True
             )
         )
+        
+class PermissionChecker:
+    AUTO_PAY_LIMIT = 1_500_000
+    
+    def can_pay(self, booking: Booking) -> dict:
+        if booking.price > self.AUTO_PAY_LIMIT:
+            return {
+                "allowed": False,
+                "requires_human_approval": True,
+                "reason": "Ticket price exceeds auto-pay limit"
+            }
+            
+        if booking.refundable is False:
+            return {
+                "allowed": False,
+                "requires_human_approval": True,
+                "reason": "Ticket is non-refundable"
+            }
+            
+        return {
+            "allowed": True,
+            "requires_human_approval": False,
+            "reason": "Payment is allowed"
+        }

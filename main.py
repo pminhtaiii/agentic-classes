@@ -1,5 +1,5 @@
 from model import BookingRequest, Booking
-from harness import VerificationChecker
+from harness import PermissionChecker
 
 
 request = BookingRequest(
@@ -18,7 +18,7 @@ booking = Booking(
     seat="12A",
     status="confirmed",
     paid=True,
-    price=2_300_000,
+    price=1_300_000,
     origin="SGN",
     destination="DAD",
     depart_date="2026-10-07",
@@ -27,6 +27,8 @@ booking = Booking(
 )
 
 
-checker = VerificationChecker(request)
+checker = PermissionChecker()
 
-print(checker.is_complete(booking))
+result = checker.can_pay(booking)
+
+print(result)
