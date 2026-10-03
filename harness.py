@@ -42,3 +42,20 @@ class PermissionChecker:
             "requires_human_approval": False,
             "reason": "Payment is allowed"
         }
+        
+class HumanApproval:
+    def request_approval(
+        self,
+        booking: Booking,
+        reason: str,
+    ) -> dict:
+        return {
+            "status": "waiting_for_approval",
+            "requires_human_approval": True,
+            "booking_code": booking.booking_code,
+            "flight_id": booking.flight_id,
+            "seat": booking.seat,
+            "price": booking.price,
+            "refundable": booking.refundable,
+            "reason": reason
+        }
