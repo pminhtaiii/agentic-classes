@@ -89,6 +89,33 @@ def book_seat(flight_id: str, seat: str) -> dict:
         "status": "held",
         "booking": booking.model_dump()
     }
+    
+@tool
+def pay(booking_code: str) -> dict:
+    """
+    Pay for a held booking
+    """
+    booking = BOOKINGS.get(booking_code)
+    
+    if booking is None:
+        return{
+            "status": "not_found",
+            "booking_code": booking_code
+        }
+    
+    if booking.paid:
+        return{
+            "status": "already_paid",
+            "booking_code": booking_code
+        }
+        
+    booking.paid = True
+    booking.status = "confirmed"
+    
+    return {
+        "status": "paid",
+        "booking_code": booking_code
+    }
         
     
     
