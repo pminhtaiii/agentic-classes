@@ -1,5 +1,7 @@
+import uuid
 from langchain.tools import tool
-from mock_data import FLIGHTS
+from mock_data import FLIGHTS, BOOKINGS
+from model import Booking
 
 @tool
 def search_flights(
@@ -43,6 +45,50 @@ def check_seat(flight_id: str) -> dict:
         "available_seats": flight.available_seats
     }
     
+@tool
+def book_seat(flight_id: str, seat: str) -> dict:
+    """
+    Reserve a seat on a flight and create a booking
+    """
+    flight = FLIGHTS.get(flight_id)
+    
+    if flight is None:
+        return {
+            "status": "not_found",
+            "flight_id": flight_id
+        }
+        
+    if seat not in flight.available_seats:
+        return {
+            "status": "seat_unavailable",
+            "flight_id": flight_id,
+            "seat": seat
+        }
+        
+    booking_code = str(uuid.uuid4())[:6].upper()
+    
+    booking = Booking(
+        booking_code=booking_code,
+        flight_id=flight.flight_id,
+        seat=seat,
+        status="held",
+        paid=False,
+        price=flight.price,
+        origin=flight.origin,
+        destination=flight.destination,
+        depart_date=flight.depart_date,
+        depart_time=flight.depart_time,
+        refundable=flight.refundable
+    )
+    
+    flight.available_seats.remove(seat)
+    
+    BOOKINGS[booking_code] = booking
+    
+    return {
+        "status": "held",
+        "booking": booking.model_dump()
+    }
         
     
     
