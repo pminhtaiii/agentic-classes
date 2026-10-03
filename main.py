@@ -1,41 +1,32 @@
-from tools import book_seat, pay
-from mock_data import FLIGHTS, BOOKINGS
+from model import BookingRequest, Booking
+from harness import VerificationChecker
 
-# result = search_flights.invoke({
-#     "origin": "SGN",
-#     "destination": "DAD",
-#     "depart_date": "2026-10-07"
-# })
-# print(result)
 
-# result = check_seat.invoke({
-#     "flight_id": "VN122"
-# })
-# print(result)
+request = BookingRequest(
+    origin="SGN",
+    destination="DAD",
+    depart_date="2026-10-07",
+    latest_departure_time="12:00",
+    max_price=2_000_000,
+    require_refundable=True
+)
 
-# result = book_seat.invoke({
-#     "flight_id": "VN122",
-#     "seat": "12A"
-# })
-# print(result)
-# print("\n")
-# print(FLIGHTS["VN122"].available_seats)
 
-from tools import book_seat, pay
+booking = Booking(
+    booking_code="ABC123",
+    flight_id="VN122",
+    seat="12A",
+    status="confirmed",
+    paid=True,
+    price=2_300_000,
+    origin="SGN",
+    destination="DAD",
+    depart_date="2026-10-07",
+    depart_time="08:10",
+    refundable=True
+)
 
-book_result = book_seat.invoke({
-    "flight_id": "VN122",
-    "seat": "12A"
-})
 
-print("Book result:")
-print(book_result)
+checker = VerificationChecker(request)
 
-booking_code = book_result["booking"]["booking_code"]
-
-pay_result = pay.invoke({
-    "booking_code": booking_code
-})
-
-print("\nPay result:")
-print(pay_result)
+print(checker.is_complete(booking))
