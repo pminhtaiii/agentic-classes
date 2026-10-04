@@ -1,34 +1,18 @@
-from dotenv import load_dotenv
-
-load_dotenv()
-
-from langsmith import traceable
-from tools import search_flights, check_seat
+from react_agent import react_agent
 
 
-@traceable(name="test_mock_tools")
-def test_tools():
-
-    search_result = search_flights.invoke({
-        "origin": "SGN",
-        "destination": "DAD",
-        "depart_date": "2026-10-07"
-    })
-
-    print("SEARCH:")
-    print(search_result)
-
-    seat_result = check_seat.invoke({
-        "flight_id": "VN122"
-    })
-
-    print("\nCHECK SEAT:")
-    print(seat_result)
-
-    return {
-        "search": search_result,
-        "seat": seat_result
-    }
+result = react_agent.invoke({
+    "messages": [
+        {
+            "role": "user",
+            "content": (
+                "Book me a flight from SGN to DAD "
+                "on 2026-10-07, departing before 12:00, "
+                "with a maximum price of 2,000,000 VND."
+            )
+        }
+    ]
+})
 
 
-test_tools()
+print(result)
