@@ -1,4 +1,4 @@
-from model import Booking, BookingRequest
+from model import Booking, BookingRequest, AgentState
 
 class VerificationChecker:
     def __init__(self, request: BookingRequest):
@@ -59,3 +59,21 @@ class HumanApproval:
             "refundable": booking.refundable,
             "reason": reason
         }
+        
+class HandoffBuilder:
+    def build_handoff(
+        self,
+        state: AgentState,
+        reason: str,
+        question: str
+    ) -> dict:
+        return {
+            "status": state.status,
+            "selected_flight_id": state.selected_flight_id,
+            "selected_seat": state.selected_seat,
+            "booking_code": state.booking_code,
+            "completed": state.completed,
+            "reason": reason,
+            "question": question
+        }
+        
