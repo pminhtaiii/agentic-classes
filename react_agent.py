@@ -21,8 +21,7 @@ TOOLS = [
 ]
 
 model = ChatGoogleGenerativeAI(
-    model='gemini-3.5-flash-lite',
-    temperature=0
+    model='gemini-3.5-flash-lite'
 )
 
 SYSTEM_PROMPT = """
