@@ -4,6 +4,7 @@ from langchain_core.messages import ToolMessage
 
 from harness import PermissionChecker
 from mock_data import BOOKINGS
+from human_approved import is_booking_approved
 
 permission_checker = PermissionChecker()
 
@@ -26,6 +27,9 @@ def permission_guard(request, handler):
             tool_call_id=request.tool_call["id"],
             name="pay"
         )
+        
+    if is_booking_approved(booking_code):
+        return handler(request)
         
     permission = permission_checker.can_pay(booking)
     
