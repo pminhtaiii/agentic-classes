@@ -8,6 +8,7 @@ from tools import (
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 from langchain.agents import create_agent
+from middleware import permission_guard
 
 load_dotenv()
 
@@ -20,7 +21,7 @@ TOOLS = [
 ]
 
 model = ChatGoogleGenerativeAI(
-    model='gemini-3.5-flash',
+    model='gemini-3.5-flash-lite',
     temperature=0
 )
 
@@ -42,5 +43,6 @@ Rules:
 react_agent = create_agent(
     model=model,
     tools=TOOLS,
-    system_prompt=SYSTEM_PROMPT
+    system_prompt=SYSTEM_PROMPT,
+    middleware=[permission_guard],
 )

@@ -1,6 +1,5 @@
 from react_agent import react_agent
 
-
 result = react_agent.invoke({
     "messages": [
         {
@@ -14,5 +13,4 @@ result = react_agent.invoke({
     ]
 })
 
-
-print(result)
+print(result["messages"][-1].content)
