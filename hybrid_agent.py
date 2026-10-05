@@ -4,6 +4,8 @@ load_dotenv()
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.types import interrupt
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import InMemorySaver
 
 from harness import PermissionChecker, VerificationChecker
 from mock_data import BOOKINGS
@@ -264,6 +266,54 @@ def executor_node(state: HybridState):
             "current_step": state.current_step + 1,
             "status": "verification_failed"
         }
+        
+def route_after_executor(state: HybridState):
+
+    if state.replan_needed:
+        return "replan"
+
+    if state.status in [
+        "completed",
+        "verification_failed",
+        "payment_rejected",
+        "booking_not_found",
+        "invalid_plan"
+    ]:
+        return "stop"
+
+    return "continue"
+
+builder = StateGraph(HybridState)
+
+builder.add_node("planner", planner_node)
+builder.add_node("executor", executor_node)
+builder.add_node("replanner", replanner_node)
+
+builder.add_edge(START, "planner")
+builder.add_edge(
+    "planner",
+    "executor"
+)
+
+builder.add_conditional_edges(
+    "executor",
+    route_after_executor,
+    {
+        "continue": "executor",
+        "replan": "replanner",
+        "stop": END
+    }
+)
+
+builder.add_edge(
+    "replanner",
+    "executor"
+)
+
+checkpointer = InMemorySaver()
+hybrid_graph = builder.compile(
+    checkpointer=checkpointer
+)
             
                 
         

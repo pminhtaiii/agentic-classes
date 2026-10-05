@@ -1,10 +1,12 @@
-from model import BookingRequest, HybridState
-from mock_data import FLIGHTS, reset_mock_data
-from hybrid_agent import planner_node, executor_node, replanner_node
+from langgraph.types import Command
+
+from model import BookingRequest
+from hybrid_agent import hybrid_graph
+from mock_data import reset_mock_data
+
 
 reset_mock_data()
 
-FLIGHTS["VJ604"].available_seats.clear()
 
 request = BookingRequest(
     origin="SGN",
@@ -15,55 +17,53 @@ request = BookingRequest(
     require_refundable=False
 )
 
-state = HybridState(
-    request=request
+
+config = {
+    "configurable": {
+        "thread_id": "hybrid-test-1"
+    }
+}
+
+
+result = hybrid_graph.invoke(
+    {
+        "request": request
+    },
+    config=config
 )
 
-# 1. Planner
-plan_result = planner_node(state)
 
-state.plan = plan_result["plan"]
-state.current_step = plan_result["current_step"]
-state.status = plan_result["status"]
+print("\nResult before approval:")
+print(result)
 
-# 2. Search flights
-result_1 = executor_node(state)
+if "__interrupt__" in result:
 
-state.candidate_flights = result_1["candidate_flights"]
-state.current_step = result_1["current_step"]
-state.status = result_1["status"]
+    approval_info = result["__interrupt__"][0].value
 
-# 3. Check seat
-result_2 = executor_node(state)
+    print("\nPayment requires human approval")
+    print("Booking code:", approval_info["booking_code"])
+    print("Flight:", approval_info["flight_id"])
+    print("Price:", approval_info["price"])
+    print("Refundable:", approval_info["refundable"])
+    print("Reason:", approval_info["reason"])
 
-print("\nBefore replan:")
-print(result_2)
+    answer = input(
+        "\nApprove payment? (yes/no): "
+    ).strip().lower()
 
+    if answer == "yes":
 
-# 4. Cập nhật state từ result_2
-state.failed_flight_ids = result_2["failed_flight_ids"]
-state.replan_needed = result_2["replan_needed"]
-state.replan_reason = result_2["replan_reason"]
-state.status = result_2["status"]
+        result = hybrid_graph.invoke(
+            Command(resume=True),
+            config=config
+        )
 
+    else:
 
-# 5. Gọi replanner
-replan_result = replanner_node(state)
-
-print("\nReplan result:")
-print(replan_result)
-
-
-# 6. Cập nhật state từ replanner
-state.plan = replan_result["plan"]
-state.replan_needed = replan_result["replan_needed"]
-state.replan_reason = replan_result["replan_reason"]
-state.replan_count = replan_result["replan_count"]
-state.status = replan_result["status"]
-
-
-# 7. Executor chạy lại sau khi replan
-result_3 = executor_node(state)
-
-print("\nAfter replan:")
-print(result_3)
+        result = hybrid_graph.invoke(
+            Command(resume=False),
+            config=config
+        )
+        
+print("\nFinal result:")
+print(result)
