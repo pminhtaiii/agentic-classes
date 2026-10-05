@@ -32,6 +32,12 @@ def planner_node(state: HybridState):
     - book a seat
     - pay
     - verify booking
+    
+    Rules:
+    - Use the exact action names above.
+    - Do not rename any action.
+    - Start with "search flights".
+    - End with "verify booking".
 
     Return only the plan.
     """
@@ -46,8 +52,9 @@ def planner_node(state: HybridState):
     
 def replanner_node(state: HybridState):
     request = state.request
+
     completed_steps = state.plan[:state.current_step]
-    
+
     prompt = f"""
     The current flight booking plan encountered a problem.
 
@@ -65,6 +72,12 @@ def replanner_node(state: HybridState):
     Completed steps:
     {completed_steps}
 
+    Candidate flights already available:
+    {state.candidate_flights}
+
+    Failed flights:
+    {state.failed_flight_ids}
+
     Current state:
     Selected flight: {state.selected_flight_id}
     Selected seat: {state.selected_seat}
@@ -73,23 +86,35 @@ def replanner_node(state: HybridState):
     Problem:
     {state.replan_reason}
 
-    Available actions:
+    You may ONLY use these exact action names:
     - search flights
     - check seat availability
     - book a seat
     - pay
     - verify booking
 
-    Create a new plan containing ONLY the remaining actions needed
-    from the current state.
+    Create ONLY the remaining actions needed from the current state.
 
-    Do not repeat completed actions unless the problem requires it.
+    Rules:
+    - Do not repeat completed actions.
+    - Do not rename actions.
+    - Do not include "search flights" if candidate flights are already available.
+    - Avoid failed flights.
     """
-    
+
     new_plan = planner_model.invoke(prompt)
-    
-    updated_plan = completed_steps + new_plan.steps
-    
+
+    remaining_steps = new_plan.steps
+
+    if state.candidate_flights:
+        remaining_steps = [
+            step
+            for step in remaining_steps
+            if step != "search flights"
+        ]
+
+    updated_plan = completed_steps + remaining_steps
+
     return {
         "plan": updated_plan,
         "replan_needed": False,
@@ -139,7 +164,7 @@ def executor_node(state: HybridState):
             return {
                 "replan_needed": True,
                 "replan_reason": "No flight satisfies the current constraints",
-                "status": "replan_needed"
+                "status": "replan_required"
             }
             
         selected_flight = valid_flights[0]
@@ -166,3 +191,4 @@ def executor_node(state: HybridState):
             "current_step": state.current_step + 1,
             "status": "executing"
         }
+    raise ValueError(f"Unknown plan step: {current_step}")
