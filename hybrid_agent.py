@@ -3,6 +3,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.types import interrupt
+
+from harness import PermissionChecker, VerificationChecker
+from mock_data import BOOKINGS
 from model import Plan, HybridState
 from tools import search_flights, check_seat, book_seat, pay
 
@@ -11,6 +15,8 @@ model = ChatGoogleGenerativeAI(
 )
 
 planner_model = model.with_structured_output(Plan)
+
+permission_checker = PermissionChecker()
 
 def planner_node(state: HybridState):
     request = state.request
@@ -191,4 +197,46 @@ def executor_node(state: HybridState):
             "current_step": state.current_step + 1,
             "status": "executing"
         }
-    raise ValueError(f"Unknown plan step: {current_step}")
+
+    if current_step == "book a seat":
+        result = book_seat.invoke({
+            "flight_id": state.selected_flight_id,
+            "seat": state.selected_seat
+        })
+        
+        return {
+            "booking_code": result["booking"]["booking_code"],
+            "current_step": state.current_step + 1,
+            "status": "executing"
+        }
+        
+    if current_step == "pay":
+        booking = BOOKINGS.get(state.booking_code)
+        permission = permission_checker.can_pay(booking)
+        
+        if not permission["allowed"]:
+            approved = interrupt({
+                "booking_code": state.booking_code,
+                "flight_id": booking.flight_id,
+                "price": booking.price,
+                "refundable": booking.refundable,
+                "reason": permission["reason"],
+                "question": "Do you approve this payment?"
+            })
+            
+            if not approved:
+                return {
+                    "requires_human_approval": False,
+                    "status": "payment_rejected"
+                }
+                
+        pay.invoke({
+            "booking_code": state.booking_code
+        })
+
+        return {
+            "requires_human_approval": False,
+            "current_step": state.current_step + 1,
+            "status": "executing"
+        }
+        
