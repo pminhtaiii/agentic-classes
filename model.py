@@ -72,3 +72,4 @@ class HybridState(BaseModel):
     replan_needed: bool = False
     replan_reason: Optional[str] = None
     replan_count: int = 0
+    failed_flight_ids: list[str] = []

@@ -4,6 +4,7 @@ load_dotenv()
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from model import Plan, HybridState
+from tools import search_flights, check_seat, book_seat, pay
 
 model = ChatGoogleGenerativeAI(
     model="gemini-3.5-flash-lite"
@@ -96,3 +97,72 @@ def replanner_node(state: HybridState):
         "replan_count": state.replan_count + 1,
         "status": "replanned"
     }
+    
+def executor_node(state: HybridState):
+    current_step = state.plan[state.current_step]
+    
+    if current_step == "search flights":
+        request = state.request
+        
+        result = search_flights.invoke({
+            "origin": request.origin,
+            "destination": request.destination,
+            "depart_date": request.depart_date
+        })
+
+        return {
+            "candidate_flights": result["flight"],
+            "current_step": state.current_step + 1,
+            "status": "executing"
+        }
+        
+    if current_step == "check seat availability":
+        request = state.request
+
+        valid_flights = []
+
+        for flight in state.candidate_flights:
+            if flight["flight_id"] in state.failed_flight_ids:
+                continue
+            if flight["depart_time"] > request.latest_departure_time:
+                continue
+            if flight["price"] > request.max_price:
+                continue
+            if request.require_refundable and not flight["refundable"]:
+                continue
+            
+            valid_flights.append(flight)
+
+        valid_flights.sort(key=lambda flight: flight["price"])
+        
+        if len(valid_flights) == 0:
+            return {
+                "replan_needed": True,
+                "replan_reason": "No flight satisfies the current constraints",
+                "status": "replan_needed"
+            }
+            
+        selected_flight = valid_flights[0]
+        
+        seat_result = check_seat.invoke({
+            "flight_id": selected_flight["flight_id"]
+        })
+        
+        if len(seat_result["available_seats"]) == 0:
+            failed_flights = state.failed_flight_ids + [selected_flight["flight_id"]]
+            
+            return {
+                "failed_flight_ids": failed_flights,
+                "replan_needed": True,
+                "replan_reason": (
+                    f"Flight {selected_flight['flight_id']} "
+                    "has no available seats."
+                ),
+                "status": "replan_required"
+            }
+        return {
+            "selected_flight_id": selected_flight["flight_id"],
+            "selected_seat": seat_result["available_seats"][0],
+            "current_step": state.current_step + 1,
+            "status": "executing"
+        }
