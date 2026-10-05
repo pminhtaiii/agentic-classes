@@ -52,6 +52,14 @@ state.status = execute_result_4["status"]
 approve_booking(state.booking_code)
 
 execute_result_4_after_approval = executor_node(state)
-print(execute_result_4_after_approval)
 
+state.requires_human_approval = execute_result_4_after_approval[
+    "requires_human_approval"
+]
+state.current_step = execute_result_4_after_approval["current_step"]
+state.status = execute_result_4_after_approval["status"]
+
+execute_result_5 = executor_node(state)
+
+print(execute_result_5)
 

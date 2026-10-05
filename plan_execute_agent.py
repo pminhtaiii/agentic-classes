@@ -6,7 +6,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from model import Plan, PlanExecuteState
 from tools import search_flights, check_seat, book_seat, pay
 
-from harness import PermissionChecker
+from harness import PermissionChecker, VerificationChecker
 from mock_data import BOOKINGS
 from human_approved import is_booking_approved
 
@@ -137,3 +137,27 @@ def executor_node(state: PlanExecuteState):
             "status": "executing"
         }
         
+    if current_step == "verify booking":
+        booking = BOOKINGS.get(state.booking_code)
+        
+        if booking is None:
+            return {
+            "completed": False,
+            "current_step": state.current_step + 1,
+            "status": "verification_failed"
+            }
+            
+        checker = VerificationChecker(state.request)
+        
+        if checker.is_complete(booking):
+            return {
+                "complete": True,
+                "current_step": state.current_step + 1,
+                "status": "completed"
+            }
+            
+        return {
+            "completed": False,
+            "current_step": state.current_step + 1,
+            "status": "verification_failed"
+        }
