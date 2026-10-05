@@ -46,7 +46,7 @@ class AgentState(BaseModel):
 class Plan(BaseModel):
     steps: list[str]
     
-class PlanExecutePlan(BaseModel):
+class PlanExecuteState(BaseModel):
     request: BookingRequest
     plan: list[str] = []
     current_step: int = 0
