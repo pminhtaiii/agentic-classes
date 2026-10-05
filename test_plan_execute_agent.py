@@ -31,6 +31,14 @@ state.current_step = execute_result["current_step"]
 state.status = execute_result["status"]
 
 execute_result_2 = executor_node(state)
-print(execute_result_2)
+
+state.selected_flight_id = execute_result_2["selected_flight_id"]
+state.selected_seat = execute_result_2["selected_seat"]
+state.current_step = execute_result_2["current_step"]
+state.status = execute_result_2["status"]
+
+execute_result_3 = executor_node(state)
+
+print(execute_result_3)
 
 

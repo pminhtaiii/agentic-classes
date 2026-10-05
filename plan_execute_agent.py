@@ -4,7 +4,7 @@ load_dotenv
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from model import Plan, PlanExecuteState
-from tools import search_flights, check_seat
+from tools import search_flights, check_seat, book_seat
 
 model = ChatGoogleGenerativeAI(
     model='gemini-3.5-flash-lite'
@@ -98,4 +98,15 @@ def executor_node(state: PlanExecuteState):
         return {
             "status": "no_available_flight"
         }
+    
+    if current_step == "book a seat":
+        result = book_seat.invoke({
+            "flight_id": state.selected_flight_id,
+            "seat": state.selected_seat
+        })
         
+        return {
+            "booking_code": result["booking"]["booking_code"],
+            "current_step": state.current_step + 1,
+            "status": "executing"
+        }
