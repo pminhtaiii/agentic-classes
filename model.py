@@ -42,3 +42,17 @@ class AgentState(BaseModel):
     completed: bool = False
     requires_human_approval: bool = False
     last_error: Optional[str] =  False
+    
+class Plan(BaseModel):
+    steps: list[str]
+    
+class PlanExecutePlan(BaseModel):
+    request: BookingRequest
+    plan: list[str] = []
+    current_step: int = 0
+    selected_flight_id: Optional[str] = None
+    selected_seat: Optional[str] = None
+    booking_code: Optional[str] = None
+    status: str = "started"
+    completed: bool = False
+    requires_human_approval: bool = False
