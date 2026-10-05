@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from model import BookingRequest, PlanExecuteState
-from plan_execute_agent import planner_node
+from plan_execute_agent import planner_node, executor_node
 
 request = BookingRequest(
     origin="SGN",
@@ -18,7 +18,14 @@ state = PlanExecuteState(
     request=request
 )
 
-result = planner_node(state)
+plan_result = planner_node(state)
 
-print(result)
+state.plan = plan_result["plan"]
+state.current_step = plan_result["current_step"]
+state.status = plan_result["status"]
+
+execute_result = executor_node(state)
+
+print(execute_result)
+
 

@@ -50,6 +50,7 @@ class PlanExecuteState(BaseModel):
     request: BookingRequest
     plan: list[str] = []
     current_step: int = 0
+    candidate_flights: list[dict] = []
     selected_flight_id: Optional[str] = None
     selected_seat: Optional[str] = None
     booking_code: Optional[str] = None
