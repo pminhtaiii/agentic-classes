@@ -4,12 +4,13 @@ load_dotenv()
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, START, END
+from langgraph.types import interrupt
+from langgraph.checkpoint.memory import InMemorySaver
 from model import Plan, PlanExecuteState
 from tools import search_flights, check_seat, book_seat, pay
 
 from harness import PermissionChecker, VerificationChecker
 from mock_data import BOOKINGS
-from human_approved import is_booking_approved
 
 model = ChatGoogleGenerativeAI(
     model='gemini-3.5-flash-lite'
@@ -122,11 +123,21 @@ def executor_node(state: PlanExecuteState):
         booking = BOOKINGS.get(state.booking_code)
         permission = permission_checker.can_pay(booking)
         
-        if (not permission["allowed"] and not is_booking_approved(state.booking_code)):
-            return {
-                "requires_human_approval": True,
-                "status": "waiting_for_approval"
-            }
+        if not permission["allowed"]:
+            approved = interrupt({
+            "booking_code": state.booking_code,
+            "flight_id": booking.flight_id,
+            "price": booking.price,
+            "refundable": booking.refundable,
+            "reason": permission["reason"],
+            "question": "Do you approve this payment?"
+            })
+            
+            if not approved:
+                return {
+                    "requires_human_approval": False,
+                    "status": "payment_rejected"
+                }
         
         result = pay.invoke({
             "booking_code": state.booking_code
@@ -164,9 +175,6 @@ def executor_node(state: PlanExecuteState):
         }
         
 def route_after_executor(state: PlanExecuteState):
-    if state.status == "waiting_for_approval":
-        return "stop"
-
     if state.status == "completed":
         return "stop"
 
@@ -195,4 +203,6 @@ builder.add_conditional_edges(
     }
 )
 
-plan_execute_graph = builder.compile()
+checkpointer = InMemorySaver()
+
+plan_execute_graph = builder.compile(checkpointer=checkpointer)
