@@ -239,4 +239,31 @@ def executor_node(state: HybridState):
             "current_step": state.current_step + 1,
             "status": "executing"
         }
+    
+    if current_step == "verify booking":
+        booking = BOOKINGS.get(state.booking_code)
+        
+        if booking is None:
+            return {
+                "completed": False,
+                "current_step": state.current_step + 1,
+                "status": "verification_failed"
+            }
+        
+        checker = VerificationChecker(state.request)
+        
+        if checker.is_complete(booking):
+            return {
+                "completed": True,
+                "current_step": state.current_step + 1,
+                "status": "completed"
+            }
+
+        return {
+            "completed": False,
+            "current_step": state.current_step + 1,
+            "status": "verification_failed"
+        }
+            
+                
         
