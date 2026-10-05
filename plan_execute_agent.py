@@ -1,8 +1,9 @@
 from dotenv import load_dotenv
 
-load_dotenv
+load_dotenv()
 
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.graph import StateGraph, START, END
 from model import Plan, PlanExecuteState
 from tools import search_flights, check_seat, book_seat, pay
 
@@ -161,3 +162,37 @@ def executor_node(state: PlanExecuteState):
             "current_step": state.current_step + 1,
             "status": "verification_failed"
         }
+        
+def route_after_executor(state: PlanExecuteState):
+    if state.status == "waiting_for_approval":
+        return "stop"
+
+    if state.status == "completed":
+        return "stop"
+
+    if state.status == "verification_failed":
+        return "stop"
+
+    if state.status == "no_available_flight":
+        return "stop"
+
+    return "continue"
+
+builder = StateGraph(PlanExecuteState)
+
+builder.add_node("planner", planner_node)
+builder.add_node("executor", executor_node)
+
+builder.add_edge(START, "planner")
+builder.add_edge("planner", "executor")
+
+builder.add_conditional_edges(
+    "executor",
+    route_after_executor,
+    {
+        "continue": "executor",
+        "stop": END
+    }
+)
+
+plan_execute_graph = builder.compile()
