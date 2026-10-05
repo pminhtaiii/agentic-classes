@@ -4,7 +4,7 @@ load_dotenv
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from model import Plan, PlanExecuteState
-from tools import search_flights
+from tools import search_flights, check_seat
 
 model = ChatGoogleGenerativeAI(
     model='gemini-3.5-flash-lite'
@@ -60,3 +60,42 @@ def executor_node(state: PlanExecuteState):
             "current_step": state.current_step + 1,
             "status": "executing"
         }
+        
+    if current_step == "check seat availability":
+        request = state.request
+        
+        valid_flights = []
+        
+        for flight in state.candidate_flights:
+            if flight["depart_time"] > request.latest_departure_time:
+                continue
+            
+            if flight["price"] > request.max_price:
+                continue
+            
+            if request.require_refundable and not flight["refundable"]:
+                continue
+            
+            valid_flights.append(flight)
+            
+        valid_flights.sort(key=lambda flight: flight["price"])
+        
+        for flight in valid_flights:
+            seat_result = check_seat.invoke({
+                "flight_id": flight["flight_id"]
+            })
+            
+            if len(seat_result["available_seats"]) > 0:
+                selected_seat = seat_result["available_seats"][0]
+                
+                return {
+                    "selected_flight_id": flight["flight_id"],
+                    "selected_seat": selected_seat,
+                    "current_step": state.current_step + 1,
+                    "status": "executing"
+                }
+        
+        return {
+            "status": "no_available_flight"
+        }
+        

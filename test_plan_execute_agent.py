@@ -26,6 +26,11 @@ state.status = plan_result["status"]
 
 execute_result = executor_node(state)
 
-print(execute_result)
+state.candidate_flights = execute_result["candidate_flights"]
+state.current_step = execute_result["current_step"]
+state.status = execute_result["status"]
+
+execute_result_2 = executor_node(state)
+print(execute_result_2)
 
 
