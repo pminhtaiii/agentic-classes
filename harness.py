@@ -61,7 +61,7 @@ class HumanApproval:
         }
         
 class HandoffBuilder:
-    def build_handoff(
+    def build(
         self,
         state: AgentState,
         reason: str,

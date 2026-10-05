@@ -4,7 +4,7 @@ from langchain_core.messages import ToolMessage, HumanMessage
 
 from react_agent import react_agent
 from model import BookingRequest, AgentState
-from harness import VerificationChecker
+from harness import VerificationChecker, HandoffBuilder
 from mock_data import BOOKINGS, reset_mock_data
 from human_approved import approve_booking, reset_approvals
 
@@ -41,6 +41,8 @@ request = BookingRequest(
 )
 
 state = AgentState(request=request)
+
+handoff_builder = HandoffBuilder()
 
 user_message = (
     f"Book me a flight from {request.origin} to {request.destination} "
@@ -94,11 +96,25 @@ if approval_request is not None:
 
     else:
         state.status = "payment_rejected"
-        print("\nPayment rejected by user.")
+        state.completed = False
+        
+        handoff = handoff_builder.build(
+            state=state,
+            reason="User rejected the payment",
+            question="Would you like to choose another flight?"
+        )
+        
+        print("\nHandoff:")
+        print(handoff)
 
 checker = VerificationChecker(request)
 
 booking = BOOKINGS.get(booking_code)
+
+if booking is not None:
+    state.booking_code = booking.booking_code
+    state.selected_flight_id = booking.flight_id
+    state.selected_seat = booking.seat
 
 if booking is not None and checker.is_complete(booking):
     state.completed = True
@@ -108,8 +124,12 @@ if booking is not None and checker.is_complete(booking):
 else:
     state.completed = False
     state.status = "verification_failed"
-    print("\nVerification failed.")
-    print("Task is not complete.")
+    
+    handoff = handoff_builder.build(
+        state=state,
+        reason="The booking did not satisfy the completion criteria",
+        question="Please review the booking or choose another flight"
+    )
 
 print("\nCurrent Agent State:")
 print(state.model_dump())
