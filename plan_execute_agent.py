@@ -4,11 +4,17 @@ load_dotenv
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from model import Plan, PlanExecuteState
-from tools import search_flights, check_seat, book_seat
+from tools import search_flights, check_seat, book_seat, pay
+
+from harness import PermissionChecker
+from mock_data import BOOKINGS
+from human_approved import is_booking_approved
 
 model = ChatGoogleGenerativeAI(
     model='gemini-3.5-flash-lite'
 )
+
+permission_checker = PermissionChecker()
 
 planner_model = model.with_structured_output(Plan)
 
@@ -110,3 +116,24 @@ def executor_node(state: PlanExecuteState):
             "current_step": state.current_step + 1,
             "status": "executing"
         }
+        
+    if current_step == "pay":
+        booking = BOOKINGS.get(state.booking_code)
+        permission = permission_checker.can_pay(booking)
+        
+        if (not permission["allowed"] and not is_booking_approved(state.booking_code)):
+            return {
+                "requires_human_approval": True,
+                "status": "waiting_for_approval"
+            }
+        
+        result = pay.invoke({
+            "booking_code": state.booking_code
+        })
+        
+        return {
+            "requires_human_approval": False,
+            "current_step": state.current_step + 1,
+            "status": "executing"
+        }
+        

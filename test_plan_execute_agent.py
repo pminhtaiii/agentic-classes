@@ -4,6 +4,7 @@ load_dotenv()
 
 from model import BookingRequest, PlanExecuteState
 from plan_execute_agent import planner_node, executor_node
+from human_approved import approve_booking
 
 request = BookingRequest(
     origin="SGN",
@@ -39,6 +40,18 @@ state.status = execute_result_2["status"]
 
 execute_result_3 = executor_node(state)
 
-print(execute_result_3)
+state.booking_code = execute_result_3["booking_code"]
+state.current_step = execute_result_3["current_step"]
+state.status = execute_result_3["status"]
+
+execute_result_4 = executor_node(state)
+
+state.requires_human_approval = execute_result_4["requires_human_approval"]
+state.status = execute_result_4["status"]
+
+approve_booking(state.booking_code)
+
+execute_result_4_after_approval = executor_node(state)
+print(execute_result_4_after_approval)
 
 
