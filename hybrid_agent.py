@@ -132,6 +132,12 @@ def replanner_node(state: HybridState):
     }
     
 def executor_node(state: HybridState):
+    if state.current_step >= len(state.plan):
+        return {
+            "status": "completed",
+            "completed": True
+        }
+    
     current_step = state.plan[state.current_step]
     
     if current_step == "search flights":
